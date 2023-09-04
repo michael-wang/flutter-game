@@ -1,46 +1,58 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
+import 'package:flutter_game/game_loop.dart';
 import 'package:flutter_game/utils.dart';
+import 'package:provider/provider.dart';
 
 class Sprite extends StatefulWidget {
   static const assetPrefix = 'assets/images/';
-  // Mapping from int state to asset name (without assetPrefix).
-  final Map<int, String> state2Asset;
+  // Image asset names
+  final List<String> images;
+  // how long does it take to finish one round of images.
+  final Duration duration;
 
-  const Sprite({super.key, required this.state2Asset});
+  const Sprite({
+    super.key,
+    required this.images,
+    required this.duration,
+  });
 
   @override
   State<Sprite> createState() => _SpriteState();
 }
 
 class _SpriteState extends State<Sprite> {
-  int _state = 0;
+  late Duration _frameDuration;
+  var _elapsed = Duration.zero;
+  int _index = 0;
 
   @override
   void initState() {
     super.initState();
-    _loop();
-  }
 
-  _loop() {
-    final totalDuration = 1500.ms;
-    final totalImages = widget.state2Asset.keys.length;
-    Timer.periodic(totalDuration ~/ totalImages, (_) {
-      setState(() {
-        _state = (_state + 1) % totalImages;
-      });
-    });
+    _frameDuration = widget.duration ~/ widget.images.length;
   }
 
   @override
   Widget build(BuildContext context) {
-    // For now we just map _state of value: [0 - #assets-1) into key.
-    final key = widget.state2Asset.keys.toList()[_state];
-    final asset = widget.state2Asset[key];
-    if (asset == null) {
-      return const Placeholder();
+    final delta = context.watch<ValueNotifier<ElapsedTime>>().value;
+    _elapsed += delta;
+    print(
+        'sprite elapsed: ${delta.inMicroseconds} us, frame elapsed: ${_elapsed.inMicroseconds} use, duration per frame: ${_frameDuration.inMicroseconds} us');
+
+    switch (_elapsed.compareTo(_frameDuration)) {
+      case < 0: // No change (elapsed time < target frame elapsed time).
+        break;
+      case >= 0:
+        final indexOffset = (_elapsed / _frameDuration).round();
+        int newIndex = _index + indexOffset;
+        newIndex %= widget.images.length;
+        print(
+            'elapsed: $delta, indexOffset: $indexOffset, oldIndex: $_index, newIndex: $newIndex');
+        _index = newIndex;
+        _elapsed = Duration.zero;
     }
+
+    final asset = widget.images[_index];
     return Image.asset(Sprite.assetPrefix + asset);
   }
 }

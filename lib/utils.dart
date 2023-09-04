@@ -17,3 +17,11 @@ extension NumDurationExtensions on num {
   Duration get hours => (this * 1000 * 1000 * 60 * 60).microseconds;
   Duration get days => (this * 1000 * 1000 * 60 * 60 * 24).microseconds;
 }
+
+extension DurationExt on Duration {
+  bool get positive => compareTo(Duration.zero) > 0;
+
+  double operator /(Duration quotient) {
+    return inMicroseconds / quotient.inMicroseconds;
+  }
+}
